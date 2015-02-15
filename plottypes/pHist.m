@@ -4,36 +4,35 @@ classdef (HandleCompatible = true) pHist < handle
 
     % PROPERTIES FOR USER TO SEE AND SET
     properties (SetObservable)
-        linewidth = 2;
-        color = [];
-        solid = true;
-        stat = 'QUICK;BOX';
-        data = [];
-        binCount = 10;
+        Linewidth       = 2;
+        Color           = [];
+        Solid           = true;
+        StatDrawStyle   = 'QUICK';
+        Data            = [];
+        Statistics      = struct;
+        BinCount        = 20;
     end
         
     % HIDDEN PROPERTIES FOR INTERNAL USE
     properties (Hidden,SetAccess=private)
-        statHandle = [];
-        figureHandle = [];
-        copyHandles = [];
-        graphicsHandle = [];
+        StatHandle = [];
+        FigureHandle = [];
+        GraphicsHandle = [];
     end
-    
-    
     
     methods 
         % CONSTRUCTER
         function obj = pHist(varargin)
             % ASSING COLOR TO HISTOGRAM
-            obj.color = pColorGen;
+            obj.Color = lines(1);
             
             % CHECK IF VARARGIN IS GIVEN
             if ~isempty(varargin)
+                
                 % IF VARARGIN IS VECTOR, SET AS DATA
                 if isvector(varargin)
-                    obj.data = varargin{1};
-                    obj.draw
+                    obj.Data = varargin{1};
+                    obj.Draw
                     
                 % THROW ERROR
                 else
@@ -42,76 +41,74 @@ classdef (HandleCompatible = true) pHist < handle
             end
                 
             % SET UPDATE LISTENERS
-            addlistener(obj,'linewidth','PostSet',@obj.propertyUpdate);
-            addlistener(obj,'color','PostSet',@obj.propertyUpdate);
-            addlistener(obj,'solid','PostSet',@obj.propertyUpdate);
-            addlistener(obj,'stat','PostSet',@obj.propertyUpdate);
-            addlistener(obj,'data','PostSet',@obj.propertyUpdate);
-            addlistener(obj,'binCount','PostSet',@obj.propertyUpdate);
+            addlistener(obj,'Linewidth'     ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'Color'         ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'Solid'         ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'StatDrawStyle' ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'Data'          ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'BinCount'      ,'PostSet',@obj.propertyUpdate);
+
         end
 
         
 
         % DRAW HISTOGRAM
-        function draw(obj)
+        function Draw(obj)
             
             % CHECK THAT HISTOGRAM HAS DATA
-            if isempty(obj.data)
-                display('Error (pHist): no data in object, set data before using draw()')
+            if isempty(obj.Data)
+                display('Error (pHist): No data in object, set data before using draw()')
+                return;
             end
             
             % VERIFY VECTOR DATA
-            if ~isvector(obj.data)
-                display('Error (pHist): only a single vector can be used as data')
-                obj.data = [];
+            if ~isvector(obj.Data)
+                display('Error (pHist): Only a single vector can be used as data')
+                obj.Data = [];
                 return;
             end
             
             % BRING FIGURE TO FRONT, OR CREATE NEW FIGURE
-            if ishandle(obj.figureHandle)
-                figure(obj.figureHandle)
+            if ishandle(obj.FigureHandle)
+                figure(obj.FigureHandle)
                 
                 % DELETE OLD HISTOGRAM
-                if ~isempty(obj.graphicsHandle)
+                if ~isempty(obj.GraphicsHandle)
                     
                     % EXCLUDE THE 0 HANDLE
-                    obj.graphicsHandle = obj.graphicsHandle(obj.graphicsHandle~=0);
+                    obj.GraphicsHandle = obj.GraphicsHandle(obj.GraphicsHandle~=0);
                     
                     % DELETE REMAING HANDLES
-                    delete(obj.graphicsHandle(ishandle(obj.graphicsHandle)))
-                    obj.graphicsHandle = [];
+                    delete(obj.GraphicsHandle(ishandle(obj.GraphicsHandle)))
+                    obj.GraphicsHandle = [];
                     
                 end
                 
-                if ~isempty(obj.statHandle)
+                if ~isempty(obj.StatHandle)
                     
                     % EXCLUDE THE 0 HANDLE
-                    obj.statHandle = obj.statHandle(obj.statHandle~=0);
+                    obj.StatHandle = obj.StatHandle(obj.StatHandle~=0);
                     
                     % DELETE REMAING HANDLES
-                    delete(obj.statHandle(ishandle(obj.statHandle)))
-                    obj.statHandle = [];
+                    delete(obj.StatHandle(ishandle(obj.StatHandle)))
+                    obj.StatHandle = [];
                 end
                 
             else
-                obj.figureHandle = figure;
+                obj.FigureHandle = figure;
             end
 
-            
-            
             % GET HISTOGRAM DATA
-            [nElements, centers] = hist(obj.data,obj.binCount);
-            
+            [nElements, centers] = hist(obj.Data,obj.BinCount);
             
             
             % GET BIN WIDTH
             binWidth = centers(2)-centers(1);
             
             
-            
             % GENERATE DATA FOR PLOT
-            xdata = zeros(2*obj.binCount,1);        % ALLOCATE
-            ydata = zeros(2*obj.binCount,1);        % ALLOCATE
+            xdata = zeros(2*obj.BinCount,1);        % ALLOCATE
+            ydata = zeros(2*obj.BinCount,1);        % ALLOCATE
             
             xdata(1:2:end) = centers-binWidth/2;    % BIN START
             xdata(2:2:end) = centers+binWidth/2;    % BIN END
@@ -122,106 +119,82 @@ classdef (HandleCompatible = true) pHist < handle
             ydata = [0; ydata; 0];                  % END POINT
             
             
+            % CALCULATE STATISTICS
+            % CALCULATE MEAN
+            obj.Statistics.mean = mean(obj.Data);
+            
+            % CALCULATE STANDARD DEVIATION
+            obj.Statistics.RMS = std(obj.Data);
+            
+            % STANDARD ERROR ON THE MEAN
+            obj.Statistics.mean_uncertainty = obj.Statistics.RMS/sqrt(length(obj.Data));
+            
+            
+            
+            % SET BOX ON
+            box on
             
             % SET AXES HOLD
             hold on
             
             
+            % PLOT LINE ALONG EDGE
+            obj.GraphicsHandle(2) = plot(xdata,ydata,'Color',obj.Color,'Linewidth',obj.Linewidth);
+            
             
             % PLOT SOLID FILL
-            if obj.solid
-                obj.graphicsHandle(1) = patch(xdata,ydata,ones(size(xdata)),...
+            if obj.Solid
+                obj.GraphicsHandle(1) = patch(xdata,ydata,ones(size(xdata)),...
                     'EdgeColor','None',...
-                    'FaceColor',hsv2rgb(rgb2hsv(obj.color).*[1 0.35 1]));  % LIGHTEN COLOR A BIT
+                    'FaceColor',hsv2rgb(rgb2hsv(obj.Color).*[1 0.35 1]));  % LIGHTEN COLOR A BIT
             end
            
             
             
-            % PLOT LINE ALONG EDGE
-            obj.graphicsHandle(2) = plot(xdata,ydata,'Color',obj.color,'Linewidth',obj.linewidth);
+            % PLOT STATISTCS BOX
+%             if strfind(obj.stat,'BOX')    
+% 
+%                 CREATE TEXT BOX WITH STATS
+%                 h = uicontrol('Style','Text',...                    % TEXT BOX
+%                     'Units','Normalized',...
+%                     'Position',[0.05 0.05 0 0],...
+%                     'BackgroundColor',[1 1 1],...
+%                     'HorizontalAlignment','Left',...
+%                     'FontSize',12,...
+%                     'String', {sprintf('Mean:\t\t % .2g +- % .2g',mu,sigma_mu),sprintf('RMS:\t\t % .2g',RMS)});
+%                 
+%                 annotation('textbox', [0.2,0.4,0.1,0.1],...
+%                'String', {sprintf('Mean:\t\t % .2g +- % .2g',mu,sigma_mu),sprintf('RMS:\t\t % .2g',RMS)}))
+% 
+%                 
+%                 SET THE SIZE OF THE BOX
+%                 h.Position = h.Position + h.Extent;
+%                 
+%                 SET UPDATE CALLBACK FOR FIGURE
+%                 set(obj.FigureHandle,'ResizeFcn',@obj.doUpdate)
+%                 set(obj.FigureHandle,'CloseRequestFcn',@obj.doCleanup)
+%                  
+%             end
             
-           
-            
-            
-            % PLOT STATISTCS
-            if strfind(obj.stat,'BOX')
-                
-                
-                % CALCULATE MEAN
-                mu = mean(obj.data);
-                
-                
-                
-                % CALCULATE STANDARD DEVIATION
-                RMS = sqrt(var(obj.data));
-                
-                
-                
-                % STANDARD ERROR ON THE MEAN
-                sigma_mu = RMS/sqrt(length(xdata));
-                
-                
-                
-                % CREATE STAT BOX
-                obj.statHandle(1) = uipanel('Title','StatBox','FontSize',12,... % OUTER BOX
-                    'BackgroundColor','White',...
-                    'Position',[0.6 0.75 0.3 0.15]);
-                h = uicontrol('Parent',obj.statHandle(1),...                    % TEXT BOX
-                    'Style','Text',...
-                    'Units','Normalized',...
-                    'Position',[0.05 0.05 0.90 0.90],...
-                    'BackgroundColor',[1 1 1],...
-                    'HorizontalAlignment','Left',...
-                    'FontSize',12,...
-                    'String', {sprintf('Mean:\t\t % .2g +- % .2g',mu,sigma_mu),sprintf('RMS:\t\t % .2g',RMS)});
-                
-                
-                
-                % RESIZE STATBOX TO FIT TEXT BOX
-                extent = get(h,'Extent');
-                set(obj.statHandle(1),'Position',[0.85-extent(3) 0.85-extent(4) extent(3)+0.05 extent(4)+0.05])
-                
-                
-                
-                % SET UPDATE CALLBACK FOR FIGURE
-                set(obj.figureHandle,'ResizeFcn',@obj.doUpdate)
-                set(obj.figureHandle,'CloseRequestFcn',@obj.doCleanup)
-                
-                
-            end
-            
-            
-            if strfind(obj.stat,'QUICK')
-                
-                
-                % CALCULATE MEAN
-                mu = mean(obj.data);
-                
-                
-                
-                % CALCULATE STANDARD DEVIATION
-                RMS = sqrt(var(obj.data));
-                
-                
+            % PLOT STATISTCS QUICK
+            if strfind(obj.StatDrawStyle,'QUICK')
                 
                 % PLOT ERROR MARKER
                 hold on
                 ypos = max(nElements)*1.15;
-                obj.statHandle(2) = scatter(mu,ypos,... % CENTER DOT
-                    'MarkerEdgeColor',obj.color,...
-                    'MarkerFaceColor',obj.color);
-                
+                obj.StatHandle(2) = scatter(obj.Statistics.mean,ypos,... % CENTER DOT
+                    'MarkerEdgeColor',obj.Color,...
+                    'MarkerFaceColor',obj.Color);
                 
                 
                 % GENERATE ERROR LINE DATA
-                err_xdata = [repmat(mu-RMS,1,3) repmat(mu+RMS,1,3)];
-                
+                err_xdata = [repmat(obj.Statistics.mean-obj.Statistics.RMS,1,3) repmat(obj.Statistics.mean+obj.Statistics.RMS,1,3)];
                 
                 
                 % WE MAKE THE T's AT THE END BE 0.03 MAX BIN HEIGHT
                 err_ydata = [ypos+0.03*max(nElements) ypos-0.03*max(nElements) ypos ypos ypos+0.03*max(nElements) ypos-0.03*max(nElements)];
-                obj.statHandle(3) = plot(err_xdata,err_ydata,... % ERROR LINE
-                    'Color',obj.color,...
+                obj.StatHandle(3) = plot(err_xdata,err_ydata,... % ERROR LINE
+                    'Color',obj.Color,...
                     'LineWidth',2);
                 
                 
@@ -235,8 +208,8 @@ classdef (HandleCompatible = true) pHist < handle
         function output = getMean(obj)
             
             % RETURN MEAN AND UNCERTAINTY
-            output.mean = mean(obj.data);
-            output.uncertainty = std(obj.data)/sqrt(length(obj.data));
+            output.mean = obj.Statistics.mean;
+            output.uncertainty = obj.Statistics.mean_uncertainty;
             
         end
         
@@ -246,12 +219,10 @@ classdef (HandleCompatible = true) pHist < handle
         function reColor(obj)
             
             % GRAB NEW COLOR
-            obj.color = pColorGen;
-            
+            obj.Color = pColorGen;
             
             % REDRAW
-            obj.draw
-            
+            obj.Draw
             
         end
 
@@ -261,7 +232,7 @@ classdef (HandleCompatible = true) pHist < handle
         function doUpdate(obj,~,~)
             
             % CHECK IF STAT BOX EXISTS
-            if obj.statHandle(1)~=0
+            if obj.StatHandle(1)~=0
                 obj.reSizeStatBox
             end
             
@@ -272,9 +243,9 @@ classdef (HandleCompatible = true) pHist < handle
         % WHEN FIGURE IS CLOSED WE NEED TO UPDATE FIGURE HANDLES
         function doCleanup(obj,h,~)
             
-            % DELETE FIGUER HANDLE FROM PROPERTIES
-            if obj.figureHandle == h
-                obj.figureHandle = [];
+            % DELETE FIGURE HANDLE FROM PROPERTIES
+            if obj.FigureHandle == h
+                obj.FigureHandle = [];
             end
             
             delete(h)
@@ -287,12 +258,10 @@ classdef (HandleCompatible = true) pHist < handle
         function reSizeStatBox(obj)
             
             % GET EXTENT OF TEXT BOX
-            extent = get(get(obj.statHandle(1),'Children'),'Extent');
-            
+            extent = get(get(obj.StatHandle(1),'Children'),'Extent');
             
             % RESIZE STAT BOX
-            set(obj.statHandle(1),'Position',[0.85-extent(3) 0.85-extent(4) extent(3)+0.05 extent(4)+0.05])
-            
+            set(obj.StatHandle(1),'Position',[0.85-extent(3) 0.85-extent(4) extent(3)+0.05 extent(4)+0.05])
             
         end
         
@@ -300,25 +269,48 @@ classdef (HandleCompatible = true) pHist < handle
         
         % REDRAW ON PROPERTY UPDATE
         function propertyUpdate(obj,~,~)
-            obj.draw
+            if ~(isnumeric(obj.Linewidth) && numel(obj.Linewidth)==1)
+                display('Error (pHist): Linewidth must be a single number')
+                obj.Linewidth = 2;
+            end
+            if ~(isnumeric(obj.Color) && numel(obj.Color)==3)
+                display('Error (pHist): Color must be a three element vector')
+                obj.Color = lines(1);
+            end
+            if ~(isnumeric(obj.Solid) && numel(obj.Solid)==1)
+                display('Error (pHist): Fill parameter must be a single number')
+                obj.Solid = 1;
+            end
+            if ~all(arrayfun(@(x) any(strcmpi(x,{'QUICK','BOX'})),strsplit(obj.StatDrawStyle,';')))
+                display('Error (pHist): Invalid Statistics Draw Style, using "QUICK" instead')
+                obj.StatDrawStyle = 'QUICK';
+            end
+            if ~isvector(obj.Data)
+                display('Error (pHist): Error in data format; must be a single vector')
+                obj.Data = [];
+            end
+            if ~(isnumeric(obj.BinCount) && numel(obj.BinCount)==1)
+                display('Error (pHist): BinCount must be a single number')
+                obj.BinCount = 20;
+            end
+            obj.Draw
         end
         
         
-        % APPENDING FUNCTION
-        function append(obj)
+        % ADDING FUNCTION
+        function add(obj,addableObj)
             
-            
-            % GET CURRENT FIGURE
-            currentFigure = get(0,'CurrentFigure');
-            
-            
-            % GET CURRENT AXES
-            currentAxes =  get(currentFigure,'CurrentAxes');
-            
-            for i = 1:length(obj.graphicsHandle)
-                obj.copyHandles(end+1) = copyobj(obj.graphicsHandle, currentAxes);
-            end
+           % CLOSE THE CURRENT WINDOW
+           close(obj.FigureHandle)
+           
+           % ASSIGN NEW FIGURE WINDOW
+           obj.FigureHandle = addableObj.FigureHandle;
+           
+           % REDRAW FIGURE
+           obj.Draw()
             
         end
     end
 end
+
+
