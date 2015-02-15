@@ -6,7 +6,7 @@ classdef (HandleCompatible = true) pHist < handle
     properties (SetObservable)
         Linewidth       = 2;
         Color           = [];
-        Solid           = true;
+        Solid           = 1;
         StatDrawStyle   = 'QUICK';
         Data            = [];
         Statistics      = struct;
@@ -123,11 +123,11 @@ classdef (HandleCompatible = true) pHist < handle
             % CALCULATE MEAN
             obj.Statistics.mean = mean(obj.Data);
             
+            % STANDARD ERROR ON THE MEAN
+            obj.Statistics.mean_uncertainty = std(obj.Data)/sqrt(length(obj.Data));
+            
             % CALCULATE STANDARD DEVIATION
             obj.Statistics.RMS = std(obj.Data);
-            
-            % STANDARD ERROR ON THE MEAN
-            obj.Statistics.mean_uncertainty = obj.Statistics.RMS/sqrt(length(obj.Data));
             
             
             
@@ -146,6 +146,7 @@ classdef (HandleCompatible = true) pHist < handle
             if obj.Solid
                 obj.GraphicsHandle(1) = patch(xdata,ydata,ones(size(xdata)),...
                     'EdgeColor','None',...
+                    'FaceAlpha',obj.Solid,...                              % SET THE TRANSPARENCY
                     'FaceColor',hsv2rgb(rgb2hsv(obj.Color).*[1 0.35 1]));  % LIGHTEN COLOR A BIT
             end
            
@@ -183,6 +184,7 @@ classdef (HandleCompatible = true) pHist < handle
                 hold on
                 ypos = max(nElements)*1.15;
                 obj.StatHandle(2) = scatter(obj.Statistics.mean,ypos,... % CENTER DOT
+                    'SizeData',36*obj.Linewidth,...
                     'MarkerEdgeColor',obj.Color,...
                     'MarkerFaceColor',obj.Color);
                 
@@ -195,7 +197,7 @@ classdef (HandleCompatible = true) pHist < handle
                 err_ydata = [ypos+0.03*max(nElements) ypos-0.03*max(nElements) ypos ypos ypos+0.03*max(nElements) ypos-0.03*max(nElements)];
                 obj.StatHandle(3) = plot(err_xdata,err_ydata,... % ERROR LINE
                     'Color',obj.Color,...
-                    'LineWidth',2);
+                    'LineWidth',obj.Linewidth);
                 
                 
             end
@@ -203,67 +205,67 @@ classdef (HandleCompatible = true) pHist < handle
         
         
         
-        % STATISTICS OUTPUT
-        % GET MEAN
-        function output = getMean(obj)
-            
-            % RETURN MEAN AND UNCERTAINTY
-            output.mean = obj.Statistics.mean;
-            output.uncertainty = obj.Statistics.mean_uncertainty;
-            
-        end
+%         % STATISTICS OUTPUT
+%         % GET MEAN
+%         function output = getMean(obj)
+%             
+%             % RETURN MEAN AND UNCERTAINTY
+%             output.mean = obj.Statistics.mean;
+%             output.uncertainty = obj.Statistics.mean_uncertainty;
+%             
+%         end
+%         
         
         
-        
-        % RECOLOR HISTOGRAM
-        function reColor(obj)
-            
-            % GRAB NEW COLOR
-            obj.Color = pColorGen;
-            
-            % REDRAW
-            obj.Draw
-            
-        end
+%         % RECOLOR HISTOGRAM
+%         function reColor(obj)
+%             
+%             % GRAB NEW COLOR
+%             obj.Color = pColorGen;
+%             
+%             % REDRAW
+%             obj.Draw
+%             
+%         end
 
         
 
-        % WHEN FIGURE IS RESIZED WE NEED TO UPDATE SOME ELEMENTS
-        function doUpdate(obj,~,~)
-            
-            % CHECK IF STAT BOX EXISTS
-            if obj.StatHandle(1)~=0
-                obj.reSizeStatBox
-            end
-            
-        end
+%         % WHEN FIGURE IS RESIZED WE NEED TO UPDATE SOME ELEMENTS
+%         function doUpdate(obj,~,~)
+%             
+%             % CHECK IF STAT BOX EXISTS
+%             if obj.StatHandle(1)~=0
+%                 obj.reSizeStatBox
+%             end
+%             
+%         end
         
         
         
-        % WHEN FIGURE IS CLOSED WE NEED TO UPDATE FIGURE HANDLES
-        function doCleanup(obj,h,~)
-            
-            % DELETE FIGURE HANDLE FROM PROPERTIES
-            if obj.FigureHandle == h
-                obj.FigureHandle = [];
-            end
-            
-            delete(h)
-            
-        end
+%         % WHEN FIGURE IS CLOSED WE NEED TO UPDATE FIGURE HANDLES
+%         function doCleanup(obj,h,~)
+%             
+%             % DELETE FIGURE HANDLE FROM PROPERTIES
+%             if obj.FigureHandle == h
+%                 obj.FigureHandle = [];
+%             end
+%             
+%             delete(h)
+%             
+%         end
         
         
         
-        %RESCALE THE STAT BOX
-        function reSizeStatBox(obj)
-            
-            % GET EXTENT OF TEXT BOX
-            extent = get(get(obj.StatHandle(1),'Children'),'Extent');
-            
-            % RESIZE STAT BOX
-            set(obj.StatHandle(1),'Position',[0.85-extent(3) 0.85-extent(4) extent(3)+0.05 extent(4)+0.05])
-            
-        end
+%         %RESCALE THE STAT BOX
+%         function reSizeStatBox(obj)
+%             
+%             % GET EXTENT OF TEXT BOX
+%             extent = get(get(obj.StatHandle(1),'Children'),'Extent');
+%             
+%             % RESIZE STAT BOX
+%             set(obj.StatHandle(1),'Position',[0.85-extent(3) 0.85-extent(4) extent(3)+0.05 extent(4)+0.05])
+%             
+%         end
         
         
         
@@ -277,8 +279,8 @@ classdef (HandleCompatible = true) pHist < handle
                 display('Error (pHist): Color must be a three element vector')
                 obj.Color = lines(1);
             end
-            if ~(isnumeric(obj.Solid) && numel(obj.Solid)==1)
-                display('Error (pHist): Fill parameter must be a single number')
+            if ~(isnumeric(obj.Solid) && numel(obj.Solid)==1 && obj.Solid >= 0 && obj.Solid <= 1)
+                display('Error (pHist): Fill parameter must be a single number between 0 and 1')
                 obj.Solid = 1;
             end
             if ~all(arrayfun(@(x) any(strcmpi(x,{'QUICK','BOX'})),strsplit(obj.StatDrawStyle,';')))
