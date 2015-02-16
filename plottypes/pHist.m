@@ -1,28 +1,37 @@
 % This function generates a HISTOGRAM, for easy usage use pHist(myData), but you can also call h=pHist, and then do h.data = myData
 
 classdef (HandleCompatible = true) pHist < handle
-
+    
+    
     % PROPERTIES FOR USER TO SEE AND SET
     properties (SetObservable)
-        Linewidth       = 2;
+        
+        Linewidth       = 1.5;
         Color           = [];
         Solid           = 1;
         StatDrawStyle   = 'QUICK';
+        BinCount        = 20;
+        DisplayName     = '';
         Data            = [];
         Statistics      = struct;
-        BinCount        = 20;
+        
     end
         
     % HIDDEN PROPERTIES FOR INTERNAL USE
     properties (Hidden,SetAccess=private)
-        StatHandle = [];
-        FigureHandle = [];
-        GraphicsHandle = [];
+        
+        StatHandle      = [];
+        FigureHandle    = [];
+        GraphicsHandle  = [];
+        Type            = 'pHist';
+        
     end
     
     methods 
+        
         % CONSTRUCTER
         function obj = pHist(varargin)
+            
             % ASSING COLOR TO HISTOGRAM
             obj.Color = lines(1);
             
@@ -31,12 +40,16 @@ classdef (HandleCompatible = true) pHist < handle
                 
                 % IF VARARGIN IS VECTOR, SET AS DATA
                 if isvector(varargin)
+                    
                     obj.Data = varargin{1};
                     obj.Draw
                     
                 % THROW ERROR
                 else
-                    display('Error (pHist): arguments could not be parsed')
+                    
+                    display('Error (pHist): Arguments could not be parsed')
+                    return;
+                    
                 end
             end
                 
@@ -57,19 +70,24 @@ classdef (HandleCompatible = true) pHist < handle
             
             % CHECK THAT HISTOGRAM HAS DATA
             if isempty(obj.Data)
+                
                 display('Error (pHist): No data in object, set data before using draw()')
                 return;
+                
             end
             
             % VERIFY VECTOR DATA
             if ~isvector(obj.Data)
+                
                 display('Error (pHist): Only a single vector can be used as data')
                 obj.Data = [];
                 return;
+                
             end
             
             % BRING FIGURE TO FRONT, OR CREATE NEW FIGURE
             if ishandle(obj.FigureHandle)
+                
                 figure(obj.FigureHandle)
                 
                 % DELETE OLD HISTOGRAM
@@ -92,10 +110,13 @@ classdef (HandleCompatible = true) pHist < handle
                     % DELETE REMAING HANDLES
                     delete(obj.StatHandle(ishandle(obj.StatHandle)))
                     obj.StatHandle = [];
+                    
                 end
                 
             else
+                
                 obj.FigureHandle = figure;
+                
             end
 
             % GET HISTOGRAM DATA
@@ -130,7 +151,6 @@ classdef (HandleCompatible = true) pHist < handle
             obj.Statistics.RMS = std(obj.Data);
             
             
-            
             % SET BOX ON
             box on
             
@@ -138,19 +158,20 @@ classdef (HandleCompatible = true) pHist < handle
             hold on
             
             
-            % PLOT LINE ALONG EDGE
-            obj.GraphicsHandle(2) = plot(xdata,ydata,'Color',obj.Color,'Linewidth',obj.Linewidth);
-            
-            
             % PLOT SOLID FILL
             if obj.Solid
+                
                 obj.GraphicsHandle(1) = patch(xdata,ydata,ones(size(xdata)),...
                     'EdgeColor','None',...
                     'FaceAlpha',obj.Solid,...                              % SET THE TRANSPARENCY
                     'FaceColor',hsv2rgb(rgb2hsv(obj.Color).*[1 0.35 1]));  % LIGHTEN COLOR A BIT
+                
             end
            
             
+            % PLOT LINE ALONG EDGE
+            obj.GraphicsHandle(2) = plot(xdata,ydata,'Color',obj.Color,'Linewidth',obj.Linewidth);
+
             
             % PLOT STATISTCS BOX
 %             if strfind(obj.stat,'BOX')    
@@ -198,23 +219,9 @@ classdef (HandleCompatible = true) pHist < handle
                 obj.StatHandle(3) = plot(err_xdata,err_ydata,... % ERROR LINE
                     'Color',obj.Color,...
                     'LineWidth',obj.Linewidth);
-                
-                
+                    
             end
         end
-        
-        
-        
-%         % STATISTICS OUTPUT
-%         % GET MEAN
-%         function output = getMean(obj)
-%             
-%             % RETURN MEAN AND UNCERTAINTY
-%             output.mean = obj.Statistics.mean;
-%             output.uncertainty = obj.Statistics.mean_uncertainty;
-%             
-%         end
-%         
         
         
 %         % RECOLOR HISTOGRAM
@@ -269,47 +276,76 @@ classdef (HandleCompatible = true) pHist < handle
         
         
         
-        % REDRAW ON PROPERTY UPDATE
+        % CHECK VARIABLES AND REDRAW ON PROPERTY UPDATE
         function propertyUpdate(obj,~,~)
+            
             if ~(isnumeric(obj.Linewidth) && numel(obj.Linewidth)==1)
+                
                 display('Error (pHist): Linewidth must be a single number')
                 obj.Linewidth = 2;
+                
             end
+            
             if ~(isnumeric(obj.Color) && numel(obj.Color)==3)
+                
                 display('Error (pHist): Color must be a three element vector')
                 obj.Color = lines(1);
+                
             end
+            
             if ~(isnumeric(obj.Solid) && numel(obj.Solid)==1 && obj.Solid >= 0 && obj.Solid <= 1)
+                
                 display('Error (pHist): Fill parameter must be a single number between 0 and 1')
                 obj.Solid = 1;
+                
             end
+            
             if ~all(arrayfun(@(x) any(strcmpi(x,{'QUICK','BOX'})),strsplit(obj.StatDrawStyle,';')))
+                
                 display('Error (pHist): Invalid Statistics Draw Style, using "QUICK" instead')
                 obj.StatDrawStyle = 'QUICK';
+                
             end
+            
             if ~isvector(obj.Data)
+                
                 display('Error (pHist): Error in data format; must be a single vector')
                 obj.Data = [];
+                
             end
+            
             if ~(isnumeric(obj.BinCount) && numel(obj.BinCount)==1)
+                
                 display('Error (pHist): BinCount must be a single number')
                 obj.BinCount = 20;
+                
             end
+            
+            % REDRAW THE FIGURE
             obj.Draw
+            
         end
         
         
         % ADDING FUNCTION
         function add(obj,addableObj)
+                
+            % CHECK THAT ADDABLEOBJ IS A pHist
+            if ~strcmpi(addableObj,'pHist')
+                
+                display('Error (pHist): Can only add pHistogram')
+                return;
+                
+            end
             
-           % CLOSE THE CURRENT WINDOW
-           close(obj.FigureHandle)
-           
-           % ASSIGN NEW FIGURE WINDOW
-           obj.FigureHandle = addableObj.FigureHandle;
-           
-           % REDRAW FIGURE
-           obj.Draw()
+            % CLOSE THE CURRENT WINDOW
+            close(obj.FigureHandle)
+            
+            % ASSIGN NEW FIGURE WINDOW
+            obj.FigureHandle = addableObj.FigureHandle;
+            
+            % REDRAW FIGURE
+            obj.Draw()
             
         end
     end
