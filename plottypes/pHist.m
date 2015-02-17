@@ -11,6 +11,7 @@ classdef (HandleCompatible = true) pHist < handle
         Solid           = 1;
         StatDrawStyle   = 'QUICK';
         BinCount        = 20;
+        BinEdges        = [];
         DisplayName     = '';
         Data            = [];
         Statistics      = struct;
@@ -61,6 +62,7 @@ classdef (HandleCompatible = true) pHist < handle
             addlistener(obj,'StatDrawStyle' ,'PostSet',@obj.propertyUpdate);
             addlistener(obj,'Data'          ,'PostSet',@obj.propertyUpdate);
             addlistener(obj,'BinCount'      ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'BinEdges'      ,'PostSet',@obj.propertyUpdate);
 
         end
 
@@ -120,8 +122,33 @@ classdef (HandleCompatible = true) pHist < handle
                 
             end
 
+            
             % GET HISTOGRAM DATA
-            [nElements, centers] = hist(obj.Data,obj.BinCount);
+            if numel(obj.BinEdges)==2
+                
+                % WARN IF ELEMENTS ARE OUTSIDE THE INTERVAL
+                MissedLowerElements = sum(obj.Data < obj.BinEdges(1));
+                MissedUpperElements = sum(obj.Data > obj.BinEdges(2));
+                
+                MissedElements      = MissedLowerElements+MissedUpperElements; 
+                
+                display(sprintf('Warning (pHist): The current limits drops %d elements',MissedElements))
+                
+                
+                % DROP THE OUTLIERS
+                TruncatedData = obj.Data(obj.Data > obj.BinEdges(1));
+                TruncatedData = TruncatedData(TruncatedData < obj.BinEdges(2));
+                
+                
+                % USE THE BIN EDGES TO GENERATE THE DATA
+                [nElements, centers] = hist(TruncatedData,linspace(obj.BinEdges(1),obj.BinEdges(2),obj.BinCount));
+                
+            else
+                
+                % ELSE USE JUST BINCOUNT
+                [nElements, centers] = hist(obj.Data,obj.BinCount);
+                
+            end
             
             
             % GET BIN WIDTH
@@ -320,6 +347,18 @@ classdef (HandleCompatible = true) pHist < handle
                 
                 display('Error (pHist): BinCount must be a single number')
                 obj.BinCount = 20;
+                
+            end
+            
+            if ~(isnumeric(obj.BinEdges) && numel(obj.BinEdges)==2)
+                
+                display('Error (pHist): BinEdges must be a vector of two numbers')
+                obj.BinEdges = [];
+
+            else
+                
+                % MAKE SURE THE VECTOR IS SORTED
+                obj.BinEdges = sort(obj.BinEdges);
                 
             end
             
