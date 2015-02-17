@@ -331,7 +331,7 @@ classdef (HandleCompatible = true) pHist < handle
         function add(obj,addableObj)
                 
             % CHECK THAT ADDABLEOBJ IS A pHist
-            if ~strcmpi(addableObj,'pHist')
+            if ~strcmpi(addableObj.Type,'pHist')
                 
                 display('Error (pHist): Can only add pHistogram')
                 return;
