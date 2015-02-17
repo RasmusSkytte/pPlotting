@@ -51,6 +51,7 @@ classdef (HandleCompatible = true) pHist < handle
                     return;
                     
                 end
+                
             end
                 
             % SET UPDATE LISTENERS
@@ -221,6 +222,7 @@ classdef (HandleCompatible = true) pHist < handle
                     'LineWidth',obj.Linewidth);
                     
             end
+            
         end
         
         
@@ -348,7 +350,9 @@ classdef (HandleCompatible = true) pHist < handle
             obj.Draw()
             
         end
+        
     end
+    
 end
 
 

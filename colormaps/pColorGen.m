@@ -31,9 +31,12 @@ classdef (HandleCompatible = true) pColorGen < handle
                     
                 % THROW ERROR
                 else
+                    
                     display('Error (pColorGen): Input needs to be n x 3 matrix, using default')
                     return;
+                    
                 end
+                
             end
             
             % SET UPDATE LISTENERS
@@ -58,14 +61,17 @@ classdef (HandleCompatible = true) pColorGen < handle
         function propertyUpdate(obj,~,~)
             
             if ~(isnumeric(obj.ColorMap) && size(obj.ColorMap,2) == 3)
+                
                 display('Error (pColorGen): Input needs to be n x 3 matrix, using default')
                 obj.ColorMap = lines(64);
                 return;
+                
             end
             
         end
         
     end
+    
 end
 
 
