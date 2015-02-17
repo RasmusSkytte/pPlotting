@@ -11,7 +11,7 @@ classdef (HandleCompatible = true) pHist < handle
         Solid           = 1;
         StatDrawStyle   = 'QUICK';
         BinCount        = 20;
-        BinEdges        = [];
+        Limits        = [];
         DisplayName     = '';
         Data            = [];
         Statistics      = struct;
@@ -62,7 +62,7 @@ classdef (HandleCompatible = true) pHist < handle
             addlistener(obj,'StatDrawStyle' ,'PostSet',@obj.propertyUpdate);
             addlistener(obj,'Data'          ,'PostSet',@obj.propertyUpdate);
             addlistener(obj,'BinCount'      ,'PostSet',@obj.propertyUpdate);
-            addlistener(obj,'BinEdges'      ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'Limits'      ,'PostSet',@obj.propertyUpdate);
 
         end
 
@@ -124,24 +124,26 @@ classdef (HandleCompatible = true) pHist < handle
 
             
             % GET HISTOGRAM DATA
-            if numel(obj.BinEdges)==2
+            if numel(obj.Limits)==2
                 
                 % WARN IF ELEMENTS ARE OUTSIDE THE INTERVAL
-                MissedLowerElements = sum(obj.Data < obj.BinEdges(1));
-                MissedUpperElements = sum(obj.Data > obj.BinEdges(2));
+                MissedLowerElements = sum(obj.Data < obj.Limits(1));
+                MissedUpperElements = sum(obj.Data > obj.Limits(2));
                 
                 MissedElements      = MissedLowerElements+MissedUpperElements; 
                 
-                display(sprintf('Warning (pHist): The current limits drops %d elements',MissedElements))
+                if MissedElements > 0
+                    display(sprintf('Warning (pHist): The current limits drops %d elements',MissedElements))
+                end
                 
                 
                 % DROP THE OUTLIERS
-                TruncatedData = obj.Data(obj.Data > obj.BinEdges(1));
-                TruncatedData = TruncatedData(TruncatedData < obj.BinEdges(2));
+                TruncatedData = obj.Data(obj.Data > obj.Limits(1));
+                TruncatedData = TruncatedData(TruncatedData < obj.Limits(2));
                 
                 
                 % USE THE BIN EDGES TO GENERATE THE DATA
-                [nElements, centers] = hist(TruncatedData,linspace(obj.BinEdges(1),obj.BinEdges(2),obj.BinCount));
+                [nElements, centers] = hist(TruncatedData,linspace(obj.Limits(1),obj.Limits(2),obj.BinCount));
                 
             else
                 
@@ -350,15 +352,15 @@ classdef (HandleCompatible = true) pHist < handle
                 
             end
             
-            if ~(isnumeric(obj.BinEdges) && numel(obj.BinEdges)==2)
+            if ~(isnumeric(obj.Limits) && numel(obj.Limits)==2)
                 
-                display('Error (pHist): BinEdges must be a vector of two numbers')
-                obj.BinEdges = [];
+                display('Error (pHist): Limits must be a vector of two numbers')
+                obj.Limits = [];
 
             else
                 
                 % MAKE SURE THE VECTOR IS SORTED
-                obj.BinEdges = sort(obj.BinEdges);
+                obj.Limits = sort(obj.Limits);
                 
             end
             
