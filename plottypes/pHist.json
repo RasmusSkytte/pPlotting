@@ -1,0 +1,15 @@
+{
+    "Single":{
+        "Linewidth":1,
+        "Solid":1,
+        "StatDrawStyle":"QUICK",
+        "BinCount":51
+        },
+
+    "Multiple":{
+        "Linewidth":1,
+        "Solid":0.5,
+        "StatDrawStyle":"QUICK",
+        "BinCount":51
+        }
+}

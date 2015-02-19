@@ -6,13 +6,13 @@ classdef (HandleCompatible = true) pHist < handle
     % PROPERTIES FOR USER TO SEE AND SET
     properties (SetObservable)
         
-        Linewidth       = 1.5;
+        Linewidth       = [];
         Color           = [];
-        Solid           = 1;
-        StatDrawStyle   = 'QUICK';
-        BinCount        = 20;
-        Limits        = [];
-        DisplayName     = '';
+        Solid           = [];
+        StatDrawStyle   = [];
+        BinCount        = [];
+        Limits          = [];
+        DisplayName     = [];
         Data            = [];
         Statistics      = struct;
         
@@ -43,7 +43,6 @@ classdef (HandleCompatible = true) pHist < handle
                 if isvector(varargin)
                     
                     obj.Data = varargin{1};
-                    obj.Draw
                     
                 % THROW ERROR
                 else
@@ -54,6 +53,17 @@ classdef (HandleCompatible = true) pHist < handle
                 end
                 
             end
+            
+            
+            % LOAD DEFAULT PARAMETERS FROM JSON FILE
+            options = loadjson('pHist.json');
+            optionNames = fieldnames(options.Single);
+            for i = 1:numel(optionNames)
+                obj.(optionNames{i}) = options.Single.(optionNames{i});
+            end
+            
+            % DRAW THE HISTOGRAM
+            obj.Draw()
                 
             % SET UPDATE LISTENERS
             addlistener(obj,'Linewidth'     ,'PostSet',@obj.propertyUpdate);
@@ -62,7 +72,7 @@ classdef (HandleCompatible = true) pHist < handle
             addlistener(obj,'StatDrawStyle' ,'PostSet',@obj.propertyUpdate);
             addlistener(obj,'Data'          ,'PostSet',@obj.propertyUpdate);
             addlistener(obj,'BinCount'      ,'PostSet',@obj.propertyUpdate);
-            addlistener(obj,'Limits'      ,'PostSet',@obj.propertyUpdate);
+            addlistener(obj,'Limits'        ,'PostSet',@obj.propertyUpdate);
 
         end
 
@@ -331,7 +341,7 @@ classdef (HandleCompatible = true) pHist < handle
                 
             end
             
-            if ~all(arrayfun(@(x) any(strcmpi(x,{'QUICK','BOX'})),strsplit(obj.StatDrawStyle,';')))
+            if ~all(arrayfun(@(x) any(strcmpi(x,{'QUICK','BOX',''})),strsplit(obj.StatDrawStyle,';')))
                 
                 display('Error (pHist): Invalid Statistics Draw Style, using "QUICK" instead')
                 obj.StatDrawStyle = 'QUICK';
@@ -352,7 +362,7 @@ classdef (HandleCompatible = true) pHist < handle
                 
             end
             
-            if ~(isnumeric(obj.Limits) && numel(obj.Limits)==2)
+            if ~((isnumeric(obj.Limits) && numel(obj.Limits)==2) || isempty(obj.Limits))
                 
                 display('Error (pHist): Limits must be a vector of two numbers')
                 obj.Limits = [];
@@ -382,13 +392,25 @@ classdef (HandleCompatible = true) pHist < handle
             end
             
             % CLOSE THE CURRENT WINDOW
-            close(obj.FigureHandle)
+            try
+                close(obj.FigureHandle)
+            catch
+            end
             
             % ASSIGN NEW FIGURE WINDOW
             obj.FigureHandle = addableObj.FigureHandle;
             
-            % REDRAW FIGURE
+            % LOAD DEFAULT PARAMETERS FROM JSON FILE
+            options = loadjson('pHist.json');
+            optionNames = fieldnames(options.Multiple);
+            for i = 1:numel(optionNames)
+                obj.(optionNames{i}) = options.Multiple.(optionNames{i});
+                addableObj.(optionNames{i}) = options.Multiple.(optionNames{i});
+            end
+            
+            % REDRAW FIGURES
             obj.Draw()
+            addableObj.Draw()
             
         end
         
