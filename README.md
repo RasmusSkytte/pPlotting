@@ -8,3 +8,7 @@ Colormaps 	- A set of alternative colormaps for MATLAB
 plottypes 	- Plotting tools which are ill-supported in MATLAB
 
 You can see the CONCEPTS filefor a full description.
+
+## Requirements
+JSONlab:
+http://www.mathworks.com/matlabcentral/fileexchange/33381-jsonlab--a-toolbox-to-encode-decode-json-files-in-matlab-octave
